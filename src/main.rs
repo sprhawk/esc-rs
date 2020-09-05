@@ -28,7 +28,7 @@ use cortex_m_semihosting::{debug, hprintln};
 use stm32f3xx_hal as hal;
 
 use embedded_hal::digital::v2::OutputPin;
-use hal::{pac, prelude::*, serial::Serial};
+use hal::{dma::Target, pac, prelude::*, serial::Serial};
 
 #[entry]
 fn main() -> ! {
@@ -55,33 +55,37 @@ fn main() -> ! {
 
     // 1 start bit, 8 data bits, n stop bits, parity odd
     // picocom -b 115200 -p 1 -d 8 -y o
-    dp.USART2.cr1.write(|w| w.m().bit8().ps().odd());
+    dp.USART2
+        .cr1
+        .write(|w| w.m().bit8().ps().odd().te().enabled().re().enabled());
 
     let serial = Serial::usart2(dp.USART2, pins, 115200.bps(), clocks, &mut rcc.apb1);
     let (mut tx, mut rx) = serial.split();
-    // tx.enable_dma();
-    // rx.enable_dma();
 
-    let tx_buf = singleton!(: [u8; 9] = *b"hello DMA").unwrap();
+    let tx_buf: &mut _ = singleton!(: [u8; 16] = *b"hello, DMA world").unwrap();
     let rx_buf = singleton!(: [u8; 9] = [0; 9]).unwrap();
 
-    // let (tx_channel, rx_channel) = (dma1.ch4, dma1.ch5);
+    let dma1 = dp.DMA1.split(&mut rcc.ahb);
+    let (tx_channel, rx_channel) = (dma1.ch7, dma1.ch6);
 
     led.set_high().unwrap();
     // let mut timer = Timer::syst(cp.SYST, &clocks).start_count_down(1.hz());
-
+    let sending = tx.write_all(tx_buf, tx_channel);
+    sending.wait();
+    // hprintln!("\nsent\n").unwrap();
     loop {
-        match tx.write(tx_buf[0]) {
-            Ok(()) => (),
-            Err(_) => (),
-        }
-        match rx.read() {
-            Ok(r) => {
-                hprintln!("received: {}", r).unwrap();
-            }
-            Err(_) => (),
-        }
-        // let sending = tx.write_all(tx_buf, tx_channel);
+        // for i in 0..5 {
+        //     match tx.write(tx_buf[i]) {
+        //         Ok(()) => (),
+        //         Err(_) => (),
+        //     }
+        //     match rx.read() {
+        //         Ok(r) => {
+        //             hprintln!("received: {}", r).unwrap();
+        //         }
+        //         Err(_) => (),
+        //     }
+        // }
         // let receiving = rx.read_exact(rx_buf, rx_channel);
 
         // let (tx_buf, tx_channel, tx) = sending.wait();
