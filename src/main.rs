@@ -29,10 +29,11 @@ use stm32f3xx_hal as hal;
 
 use embedded_hal::digital::v2::OutputPin;
 use hal::{
-    dma::{dma1::C7, Channel, Target},
+    dma::{dma1::C7, Channel, Target, Transfer},
     pac,
     prelude::*,
-    serial::Serial,
+    serial::{Serial, Tx},
+    stm32::USART2,
 };
 
 #[entry]
@@ -80,13 +81,22 @@ fn main() -> ! {
     let mut buffer: Option<&mut [u8; 16]> = Some(tx_buf);
     let mut channel: Option<C7> = Some(tx_channel);
     let mut tx: Option<_> = Some(tx);
+    let mut sending: Option<Transfer<&mut [u8; 16], C7, Tx<USART2>>> = None;
     loop {
-        if let (Some(buf), Some(chn), Some(t)) = (buffer.take(), channel.take(), tx.take()) {
-            let sending = t.write_all(buf, chn);
-            let (buf, chn, t) = sending.wait();
-            buffer = Some(buf);
-            channel = Some(chn);
-            tx = Some(t);
+        if sending.is_none() {
+            if let (Some(buf), Some(chn), Some(t)) = (buffer.take(), channel.take(), tx.take()) {
+                let transfer = t.write_all(buf, chn);
+                hprintln!("starting DMA transfering").unwrap();
+                sending = Some(transfer);
+            }
+        } else if let Some(transfer) = &sending {
+            if transfer.is_complete() {
+                let transfer = sending.take().unwrap();
+                let (buf, chn, t) = transfer.wait();
+                buffer = Some(buf);
+                channel = Some(chn);
+                tx = Some(t);
+            }
         }
         // for i in 0..5 {
         //     match tx.write(tx_buf[i]) {
