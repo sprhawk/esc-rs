@@ -28,7 +28,12 @@ use cortex_m_semihosting::{debug, hprintln};
 use stm32f3xx_hal as hal;
 
 use embedded_hal::digital::v2::OutputPin;
-use hal::{dma::Target, pac, prelude::*, serial::Serial};
+use hal::{
+    dma::{dma1::C7, Channel, Target},
+    pac,
+    prelude::*,
+    serial::Serial,
+};
 
 #[entry]
 fn main() -> ! {
@@ -70,10 +75,19 @@ fn main() -> ! {
 
     led.set_high().unwrap();
     // let mut timer = Timer::syst(cp.SYST, &clocks).start_count_down(1.hz());
-    let sending = tx.write_all(tx_buf, tx_channel);
-    sending.wait();
     // hprintln!("\nsent\n").unwrap();
+
+    let mut buffer: Option<&mut [u8; 16]> = Some(tx_buf);
+    let mut channel: Option<C7> = Some(tx_channel);
+    let mut tx: Option<_> = Some(tx);
     loop {
+        if let (Some(buf), Some(chn), Some(t)) = (buffer.take(), channel.take(), tx.take()) {
+            let sending = t.write_all(buf, chn);
+            let (buf, chn, t) = sending.wait();
+            buffer = Some(buf);
+            channel = Some(chn);
+            tx = Some(t);
+        }
         // for i in 0..5 {
         //     match tx.write(tx_buf[i]) {
         //         Ok(()) => (),
