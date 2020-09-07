@@ -23,7 +23,8 @@ use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch
 
 use cortex_m::{asm, singleton};
 use cortex_m_rt::entry;
-use cortex_m_semihosting::{debug, hprintln};
+// use cortex_m_semihosting::{debug, hprintln};
+use cortex_m_log::{printer::Itm, println};
 
 use stm32f3xx_hal as hal;
 
@@ -38,9 +39,17 @@ use hal::{
 
 #[entry]
 fn main() -> ! {
-    hprintln!("Hello World").unwrap();
+    // hprintln!("Hello World").unwrap();
+    let mut core_peri = pac::CorePeripherals::take().unwrap();
+
+    let mut stim_port = &mut (core_peri.ITM.stim[0]);
+    cortex_m::iprintln!(&mut stim_port, "Hello World ITM");
+
+    // let dest_itm = cortex_m_log::destination::itm::Itm::new(core_peri.ITM);
+    // let mut log = Itm::<cortex_m_log::modes::InterruptFree>::new(dest_itm);
 
     let dp = pac::Peripherals::take().unwrap();
+
     let mut rcc = dp.RCC.constrain();
     let mut gpiob = dp.GPIOB.split(&mut rcc.ahb);
     let mut led = gpiob
@@ -50,8 +59,7 @@ fn main() -> ! {
     let mut flash = dp.FLASH.constrain();
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
 
-    let cp = cortex_m::Peripherals::take().unwrap();
-    let mut delay = hal::delay::Delay::new(cp.SYST, clocks);
+    let mut delay = hal::delay::Delay::new(core_peri.SYST, clocks);
 
     let mut gpioa = dp.GPIOA.split(&mut rcc.ahb);
     let pins = (
@@ -86,7 +94,9 @@ fn main() -> ! {
         if sending.is_none() {
             if let (Some(buf), Some(chn), Some(t)) = (buffer.take(), channel.take(), tx.take()) {
                 let transfer = t.write_all(buf, chn);
-                hprintln!("starting DMA transfering").unwrap();
+                // hprintln!("starting DMA transfering").unwrap();
+                // println!(log, "starting DMA transfering");
+                cortex_m::iprintln!(&mut stim_port, "Starting DMA Transfering");
                 sending = Some(transfer);
             }
         } else if let Some(transfer) = &sending {
@@ -96,6 +106,9 @@ fn main() -> ! {
                 buffer = Some(buf);
                 channel = Some(chn);
                 tx = Some(t);
+
+                // println!(log, "itm sent");
+                cortex_m::iprintln!(&mut stim_port, "itm sent");
             }
         }
         // for i in 0..5 {

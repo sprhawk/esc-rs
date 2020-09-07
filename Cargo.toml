@@ -8,7 +8,7 @@ version = "0.1.0"
 [dependencies]
 cortex-m = "0.6.3"
 cortex-m-rt = "0.6.12"
-cortex-m-semihosting = "0.3.5"
+# cortex-m-semihosting = "0.3.5"
 panic-halt = "0.2.0"
 
 # Uncomment for the panic example.
@@ -18,6 +18,10 @@ panic-halt = "0.2.0"
 # alloc-cortex-m = "0.3.5"
 
 embedded-hal = "0.2.4"
+
+[dependencies.cortex-m-log]
+version = "0.6.2"
+features = ["itm"]
 
 # Uncomment for the device example.
 # Update `memory.x`, set target to `thumbv7em-none-eabihf` in `.cargo/config`,
