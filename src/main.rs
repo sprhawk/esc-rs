@@ -40,13 +40,13 @@ use hal::{
 #[entry]
 fn main() -> ! {
     // hprintln!("Hello World").unwrap();
-    let mut core_peri = pac::CorePeripherals::take().unwrap();
+    let core_peri = pac::CorePeripherals::take().unwrap();
 
-    let mut stim_port = &mut (core_peri.ITM.stim[0]);
-    cortex_m::iprintln!(&mut stim_port, "Hello World ITM");
+    // let mut stim_port = &mut (core_peri.ITM.stim[0]);
+    // cortex_m::iprintln!(&mut stim_port, "Hello World ITM");
 
-    // let dest_itm = cortex_m_log::destination::itm::Itm::new(core_peri.ITM);
-    // let mut log = Itm::<cortex_m_log::modes::InterruptFree>::new(dest_itm);
+    let dest_itm = cortex_m_log::destination::itm::Itm::new(core_peri.ITM);
+    let mut log = Itm::<cortex_m_log::modes::InterruptFree>::new(dest_itm);
 
     let dp = pac::Peripherals::take().unwrap();
 
@@ -95,8 +95,8 @@ fn main() -> ! {
             if let (Some(buf), Some(chn), Some(t)) = (buffer.take(), channel.take(), tx.take()) {
                 let transfer = t.write_all(buf, chn);
                 // hprintln!("starting DMA transfering").unwrap();
-                // println!(log, "starting DMA transfering");
-                cortex_m::iprintln!(&mut stim_port, "Starting DMA Transfering");
+                println!(log, "starting DMA transfering");
+                // cortex_m::iprintln!(&mut stim_port, "Starting DMA Transfering");
                 sending = Some(transfer);
             }
         } else if let Some(transfer) = &sending {
@@ -107,8 +107,8 @@ fn main() -> ! {
                 channel = Some(chn);
                 tx = Some(t);
 
-                // println!(log, "itm sent");
-                cortex_m::iprintln!(&mut stim_port, "itm sent");
+                println!(log, "itm sent");
+                // cortex_m::iprintln!(&mut stim_port, "itm sent");
             }
         }
         // for i in 0..5 {
