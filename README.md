@@ -8,7 +8,11 @@
 
 ```
 # openocd -f board/st_nucleo_f3.cfg -f interface/stlink-v2-1.cfg
+cargo install itm # only when not installed
+mkfifo itm.fifo # only when not exists
+itmdump -f itm.fifo
 openocd -f openocd.cfg
+sh picocom.sh # to start serial
 arm-none-eabi-gdb -x openocd.gdb target/thumbv7em-none-eabihf/debug/esc-rs
 ```
 
